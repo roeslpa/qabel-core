@@ -420,7 +420,7 @@ public class CryptoUtils {
 		byte[] nonce = new byte[SYMM_NONCE_SIZE_BIT / 8];
 		byte[] counter = new byte[(SYMM_IV_SIZE_BIT - SYMM_NONCE_SIZE_BIT) / 8];
 		byte[] encryptedPlainText = new byte[cipherText.length
-				- SYMM_NONCE_SIZE_BIT / 8];
+				- SYMM_IV_SIZE_BIT / 8];
 		byte[] plainText = null;
 		ByteArrayOutputStream ivOS = new ByteArrayOutputStream();
 		IvParameterSpec iv;
@@ -712,9 +712,9 @@ public class CryptoUtils {
 	public byte[] decryptAuthenticatedSymmetricAndValidateTag(
 			byte[] cipherText, SecretKey key) {
 		ByteArrayInputStream bi = new ByteArrayInputStream(cipherText);
-		byte[] nonce = new byte[SYMM_NONCE_SIZE_BIT / 8];
+		byte[] nonce = new byte[SYMM_IV_SIZE_BIT / 8];
 		byte[] encryptedPlainText = new byte[cipherText.length
-				- SYMM_NONCE_SIZE_BIT / 8];
+				- SYMM_IV_SIZE_BIT / 8];
 		byte[] plainText = null;
 		IvParameterSpec iv;
 

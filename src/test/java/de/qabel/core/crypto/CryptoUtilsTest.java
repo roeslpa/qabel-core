@@ -78,6 +78,7 @@ public class CryptoUtilsTest {
 
 		byte[] cipherText = cu.encryptSymmetric(plainText, key, nonce);
 		byte[] plainTextTwo = cu.decryptSymmetric(cipherText, key);
+
 		assertEquals(Hex.toHexString(nonce) + Hex.toHexString(cipherTextExpected),Hex.toHexString(cipherText));
 		assertEquals(Hex.toHexString(plainText), Hex.toHexString(plainTextTwo));
 	}
