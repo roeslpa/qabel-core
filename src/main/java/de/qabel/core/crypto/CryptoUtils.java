@@ -365,6 +365,11 @@ public class CryptoUtils {
 			counter[counter.length - 1] = 1;
 		}
 
+		if(nonce.length < SYMM_NONCE_SIZE_BIT / 8) {
+			nonce = getRandomBytes(SYMM_NONCE_SIZE_BIT / 8);
+		}
+		iv = new IvParameterSpec(nonce);
+
 		try {
 			ivOS.write(nonce);
 			ivOS.write(counter);
@@ -704,7 +709,6 @@ public class CryptoUtils {
 	 *            verification
 	 * @return Plaintext or null if validation of authentication tag fails
 	 */
-
 	public byte[] decryptAuthenticatedSymmetricAndValidateTag(
 			byte[] cipherText, SecretKey key) {
 		ByteArrayInputStream bi = new ByteArrayInputStream(cipherText);
