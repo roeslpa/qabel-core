@@ -183,7 +183,7 @@ public class CryptoUtilsTest {
 				+ctrEnc+"\nGCM Time = "+gcmEnc+"\nDecryption:\nCTR Time = "+ctrDec
 				+"\nGCM Time = "+gcmDec+"\nHMAC:\nCalculation = "+hmacCalc+"\nValidation = "
 				+hmacVal+"\n\nAE with CTR and HMAC = "+(ctrEnc+ctrDec+hmacCalc+hmacVal)
-				+"\nEA with GCM = "+(gcmEnc+gcmDec)+"\n(in milliseconds)");
+				+"\nAE with GCM = "+(gcmEnc+gcmDec)+"\n(in milliseconds)");
 		assertEquals(Hex.toHexString(plainText), Hex.toHexString(plainText2));
 	}
 }
