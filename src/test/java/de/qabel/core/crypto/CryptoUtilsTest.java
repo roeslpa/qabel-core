@@ -2,8 +2,13 @@ package de.qabel.core.crypto;
 
 import static org.junit.Assert.*;
 
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.math.BigInteger;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 
 import javax.crypto.BadPaddingException;
 
@@ -135,5 +140,50 @@ public class CryptoUtilsTest {
 		
 		byte[] plainText = cu.decryptAuthenticatedSymmetricAndValidateTag(cipherText, key);
 		assertEquals(plainText, null);
+	}
+	
+	@Test
+	public void speedTestSymmCrypto() throws IOException {
+		byte[] testBytes = Files.readAllBytes(Paths.get("src/test/java/de/qabel/core/crypto/gcm-spec.pdf"));
+		byte[] key = Hex.decode("feffe9928665731c6d6a8f9467308308feffe9928665731c6d6a8f9467308308");
+		long gcmEnc=0, gcmDec=0, ctrEnc=0, ctrDec=0, hmacCalc=0, hmacVal=0;
+		long startTime, ctrEncFinTime, gcmEncFinTime, ctrDecFinTime, gcmDecFinTime, hmacCalcTime, hmacValTime;
+		byte[] cipherText, cipherText2, plainText=null, plainText2=null, hmac;
+		
+		for(int i = 0; i < 500; i++) {
+			startTime = System.nanoTime();
+			cipherText = cu.encryptSymmetric(testBytes, key);
+			ctrEncFinTime = System.nanoTime();
+			cipherText2 = cu.encryptAuthenticatedSymmetric(testBytes, key);
+			gcmEncFinTime = System.nanoTime();
+			plainText = cu.decryptSymmetric(cipherText, key);
+			ctrDecFinTime = System.nanoTime();
+			plainText2 = cu.decryptAuthenticatedSymmetricAndValidateTag(cipherText2, key);
+			gcmDecFinTime = System.nanoTime();
+			hmac = cu.calcHmac(cipherText, key);
+			hmacCalcTime = System.nanoTime();
+			cu.validateHmac(cipherText, hmac, key);
+			hmacValTime = System.nanoTime();
+			
+			gcmEnc += gcmEncFinTime-ctrEncFinTime;
+			gcmDec += gcmDecFinTime-ctrDecFinTime;
+			ctrEnc += ctrEncFinTime-startTime;
+			ctrDec += ctrDecFinTime-gcmEncFinTime;
+			hmacCalc += hmacCalcTime-gcmDecFinTime;
+			hmacVal += hmacValTime-hmacCalcTime;
+		}
+		gcmEnc /= 1000000;
+		gcmDec /= 1000000;
+		ctrEnc /= 1000000;
+		ctrDec /= 1000000;
+		hmacCalc /= 1000000;
+		hmacVal /= 1000000;
+		
+		System.out.println("File size = "+testBytes.length+" bytes\nEncryption:\nCTR Time = "
+				+ctrEnc+"\nGCM Time = "+gcmEnc+"\nDecryption:\nCTR Time = "+ctrDec
+				+"\nGCM Time = "+gcmDec+"\nHMAC:\nCalculation = "+hmacCalc+"\nValidation = "
+				+hmacVal+"\n\nAE with CTR and HMAC = "+(ctrEnc+ctrDec+hmacCalc+hmacVal)
+				+"\nEA with GCM = "+(gcmEnc+gcmDec)+"\n(in milliseconds)");
+		assertEquals(Hex.toHexString(plainText), Hex.toHexString(plainText2));
 	}
 }
