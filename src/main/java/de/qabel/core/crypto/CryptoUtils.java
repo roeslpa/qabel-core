@@ -3,6 +3,7 @@ package de.qabel.core.crypto;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.security.AlgorithmParameters;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.MessageDigest;
@@ -26,7 +27,11 @@ import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 
 import org.apache.logging.log4j.*;
+import org.bouncycastle.asn1.cms.GCMParameters;
 import org.bouncycastle.crypto.DataLengthException;
+import org.bouncycastle.crypto.params.AEADParameters;
+import org.bouncycastle.crypto.params.KeyParameter;
+import org.bouncycastle.crypto.params.ParametersWithIV;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 
 public class CryptoUtils {
@@ -43,6 +48,7 @@ public class CryptoUtils {
 	private final static String SYMM_ALT_TRANSFORMATION = "AES/GCM/NoPadding";
 	private final static int SYMM_IV_SIZE_BIT = 128;
 	private final static int SYMM_NONCE_SIZE_BIT = 96;
+	private final static int GCM_TAG_SIZE_BIT = 128;
 	private final static int AES_KEY_SIZE_BYTE = 32;
 	private final static int AES_KEY_SIZE_BIT = AES_KEY_SIZE_BYTE * 8;
 	private final static int ENCRYPTED_AES_KEY_SIZE_BYTE = 256;
@@ -348,7 +354,6 @@ public class CryptoUtils {
 	 *            random input that is concatenated to a counter
 	 * @return ciphertext which is the result of the encryption
 	 */
-
 	byte[] encryptSymmetric(byte[] plainText, SecretKey key,
 			byte[] nonce) {
 		ByteArrayOutputStream cipherText = new ByteArrayOutputStream();
@@ -420,7 +425,7 @@ public class CryptoUtils {
 		byte[] nonce = new byte[SYMM_NONCE_SIZE_BIT / 8];
 		byte[] counter = new byte[(SYMM_IV_SIZE_BIT - SYMM_NONCE_SIZE_BIT) / 8];
 		byte[] encryptedPlainText = new byte[cipherText.length
-				- SYMM_IV_SIZE_BIT / 8];
+				- SYMM_NONCE_SIZE_BIT / 8];
 		byte[] plainText = null;
 		ByteArrayOutputStream ivOS = new ByteArrayOutputStream();
 		IvParameterSpec iv;
@@ -712,9 +717,9 @@ public class CryptoUtils {
 	public byte[] decryptAuthenticatedSymmetricAndValidateTag(
 			byte[] cipherText, SecretKey key) {
 		ByteArrayInputStream bi = new ByteArrayInputStream(cipherText);
-		byte[] nonce = new byte[SYMM_IV_SIZE_BIT / 8];
+		byte[] nonce = new byte[SYMM_NONCE_SIZE_BIT / 8];
 		byte[] encryptedPlainText = new byte[cipherText.length
-				- SYMM_IV_SIZE_BIT / 8];
+				- SYMM_NONCE_SIZE_BIT / 8];
 		byte[] plainText = null;
 		IvParameterSpec iv;
 
@@ -739,7 +744,7 @@ public class CryptoUtils {
 			// TODO Auto-generated catch block
 			e1.printStackTrace();
 		}
-
+		
 		iv = new IvParameterSpec(nonce);
 
 		try {
