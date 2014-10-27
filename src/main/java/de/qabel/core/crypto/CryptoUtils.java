@@ -2,7 +2,14 @@ package de.qabel.core.crypto;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.MessageDigest;
@@ -41,6 +48,7 @@ public class CryptoUtils {
 	private final static String SYMM_KEY_ALGORITHM = "AES";
 	private final static String SYMM_TRANSFORMATION = "AES/CTR/NoPadding";
 	private final static String SYMM_ALT_TRANSFORMATION = "AES/GCM/NoPadding";
+	private final static int SYMM_ALT_READ_SIZE_BYTE = 16;
 	private final static int SYMM_IV_SIZE_BIT = 128;
 	private final static int SYMM_NONCE_SIZE_BIT = 96;
 	private final static int AES_KEY_SIZE_BYTE = 32;
@@ -643,20 +651,6 @@ public class CryptoUtils {
 		IvParameterSpec iv;
 		ByteArrayOutputStream cipherText = new ByteArrayOutputStream();
 
-		try {
-			gcmCipher = Cipher.getInstance(SYMM_ALT_TRANSFORMATION,
-					CRYPTOGRAPHIC_PROVIDER);
-		} catch (NoSuchAlgorithmException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (NoSuchProviderException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (NoSuchPaddingException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-
 		if (nonce == null || nonce.length != SYMM_NONCE_SIZE_BIT / 8) {
 			nonce = getRandomBytes(SYMM_NONCE_SIZE_BIT / 8);
 		}
@@ -716,23 +710,9 @@ public class CryptoUtils {
 				- SYMM_NONCE_SIZE_BIT / 8];
 		byte[] plainText = null;
 		IvParameterSpec iv;
-
+		
 		try {
-			gcmCipher = Cipher.getInstance(SYMM_ALT_TRANSFORMATION,
-					CRYPTOGRAPHIC_PROVIDER);
-		} catch (NoSuchAlgorithmException e2) {
-			// TODO Auto-generated catch block
-			e2.printStackTrace();
-		} catch (NoSuchProviderException e2) {
-			// TODO Auto-generated catch block
-			e2.printStackTrace();
-		} catch (NoSuchPaddingException e2) {
-			// TODO Auto-generated catch block
-			e2.printStackTrace();
-		}
-
-		try {
-			bi.read(nonce);
+			bi.read(nonce);	
 			bi.read(encryptedPlainText);
 		} catch (IOException e1) {
 			// TODO Auto-generated catch block
@@ -754,11 +734,117 @@ public class CryptoUtils {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		} catch (BadPaddingException e) {
-			// TODO this exception is thrown if ciphertext or authentication tag
-			// was modified
+			// TODO this exception is thrown if ciphertext or authentication tag was modified
 			logger.debug("Authentication tag is invalid!");
 			return null;
 		}
 		return plainText;
+	}
+	
+	
+	boolean encryptFileAuthenticatedSymmetric(File file, OutputStream outputStream, byte[] key, byte[] nonce) {
+		SecretKeySpec symmetricKey;
+		IvParameterSpec iv;
+		DataOutputStream cipherText = new DataOutputStream(outputStream);
+		FileInputStream fileInputStream;
+		byte[] temp = new byte[SYMM_ALT_READ_SIZE_BYTE];
+		
+		try {
+			fileInputStream = new FileInputStream(file);
+		} catch (FileNotFoundException e2) {
+			// TODO Auto-generated catch block
+			e2.printStackTrace();
+			return false;
+		}
+
+		if(nonce.length != SYMM_NONCE_SIZE_BIT / 8) {
+			nonce = getRandomBytes(SYMM_NONCE_SIZE_BIT / 8);
+		}
+
+		iv = new IvParameterSpec(nonce);
+		symmetricKey = new SecretKeySpec(key, SYMM_KEY_ALGORITHM);
+		
+		try {
+			gcmCipher.init(Cipher.ENCRYPT_MODE, symmetricKey, iv);
+		} catch (InvalidKeyException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (InvalidAlgorithmParameterException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+		try {
+			cipherText.write(nonce);
+			while(fileInputStream.available() > 0) {
+				fileInputStream.read(temp, 0, SYMM_ALT_READ_SIZE_BYTE);
+				cipherText.write(gcmCipher.update(temp));
+			}
+			fileInputStream.close();
+			cipherText.write(gcmCipher.doFinal());
+		} catch (IllegalBlockSizeException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (BadPaddingException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return true;
+	}
+	
+	File decryptFileAuthenticatedSymmetricAndValidateTag(InputStream inputStream, String pathName, byte[] key) {
+		FileOutputStream fileOutput = null;
+		byte[] nonce = new byte[SYMM_NONCE_SIZE_BIT / 8];
+		IvParameterSpec iv;
+		SecretKeySpec symmetricKey;
+		byte[] temp = new byte[SYMM_ALT_READ_SIZE_BYTE];
+		
+		try {
+			fileOutput = new FileOutputStream(pathName);
+		} catch (FileNotFoundException e2) {
+			// TODO Auto-generated catch block
+			e2.printStackTrace();
+		}
+
+		try {
+			inputStream.read(nonce);
+		} catch (IOException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
+		
+		iv = new IvParameterSpec(nonce);
+
+		try {
+			gcmCipher.init(Cipher.DECRYPT_MODE, key, iv);
+			while(inputStream.available() > 0) {
+				inputStream.read(temp, 0, SYMM_ALT_READ_SIZE_BYTE);
+				fileOutput.write(gcmCipher.update(temp));
+			}
+			fileOutput.write(gcmCipher.doFinal());
+			fileOutput.close();
+		} catch (InvalidKeyException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (InvalidAlgorithmParameterException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IllegalBlockSizeException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (BadPaddingException e) {
+			// TODO this exception is thrown if ciphertext or authentication tag
+			// was modified
+			logger.debug("Authentication tag is invalid!");
+			return null;
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+		return new File(pathName);
 	}
 }
