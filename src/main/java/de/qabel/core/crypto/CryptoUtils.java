@@ -801,6 +801,7 @@ public class CryptoUtils {
 		IvParameterSpec iv;
 		SecretKeySpec symmetricKey;
 		byte[] temp = new byte[SYMM_ALT_READ_SIZE_BYTE];
+		int readBytes;
 		
 		try {
 			fileOutput = new FileOutputStream(pathName);

@@ -2,9 +2,17 @@ package de.qabel.core.crypto;
 
 import static org.junit.Assert.*;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
 import java.security.InvalidKeyException;
-
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import javax.crypto.BadPaddingException;
 import javax.crypto.spec.SecretKeySpec;
 
@@ -138,5 +146,36 @@ public class CryptoUtilsTest {
 		
 		byte[] plainText = cu.decryptAuthenticatedSymmetricAndValidateTag(cipherText, key);
 		assertEquals(plainText, null);
+	}
+	
+	@Test
+	public void fileEncryptionTest() throws IOException {
+		String fileName = "src/test/java/de/qabel/core/crypto/gcm-spec.pdf";
+		byte[] key = Hex.decode("feffe9928665731c6d6a8f9467308308feffe9928665731c6d6a8f9467308308");
+		byte[] nonce = Hex.decode("cafebabefacedbaddecaf888");
+		File testFile = new File(fileName);
+		FileOutputStream cipherStream = new FileOutputStream(fileName+".enc");
+		
+		cu.encryptFileAuthenticatedSymmetric(testFile, (OutputStream) cipherStream, key, nonce);
+		
+		assertEquals(Hex.toHexString(Files.readAllBytes(Paths.get(fileName+".enc"))),
+				Hex.toHexString(cu.encryptAuthenticatedSymmetric(
+						Files.readAllBytes(Paths.get(fileName)), key, nonce)));
+		
+		/*assertEquals(Files.readAllBytes(Paths.get("src/test/java/de/qabel/core/crypto/gcm-spec.pdf.enc")).length,
+				cu.encryptAuthenticatedSymmetric(
+						Files.readAllBytes(Paths.get("src/test/java/de/qabel/core/crypto/gcm-spec.pdf")), key, nonce).length);*/
+	}
+	
+	@Test
+	public void fileDecryptionTest() throws IOException {
+		String fileName = "src/test/java/de/qabel/core/crypto/gcm-spec.pdf";
+		byte[] key = Hex.decode("feffe9928665731c6d6a8f9467308308feffe9928665731c6d6a8f9467308308");
+		FileInputStream cipherStream = new FileInputStream(new File(fileName+".enc"));
+		
+		cu.decryptFileAuthenticatedSymmetricAndValidateTag(cipherStream, fileName+".dec", key);
+		
+		assertEquals(Hex.toHexString(Files.readAllBytes(Paths.get(fileName))),
+				Hex.toHexString(Files.readAllBytes(Paths.get(fileName+".dec"))));
 	}
 }
