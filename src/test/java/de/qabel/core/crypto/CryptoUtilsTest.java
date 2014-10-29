@@ -31,6 +31,7 @@ public class CryptoUtilsTest {
 	final QblPrimaryKeyPair qpkp = new QblPrimaryKeyPair();
 	final QblPrimaryKeyPair qpkp2 = new QblPrimaryKeyPair();
 	final String jsonTestString = "{\"version\":1,\"time\":100,\"sender\":20,\"model\":\"de.example.qabel.MailMessage\",\"data\":\"{\"sender\":\"a@a.com\",\"content\":\"hello world\",\"recipient\":\"b@b.com\"}\"}";
+	String testFileName = "src/test/java/de/qabel/core/crypto/testFile";
 
 	@Rule
 	public ExpectedException exception = ExpectedException.none();
@@ -150,32 +151,26 @@ public class CryptoUtilsTest {
 	
 	@Test
 	public void fileEncryptionTest() throws IOException {
-		String fileName = "src/test/java/de/qabel/core/crypto/gcm-spec.pdf";
 		byte[] key = Hex.decode("feffe9928665731c6d6a8f9467308308feffe9928665731c6d6a8f9467308308");
 		byte[] nonce = Hex.decode("cafebabefacedbaddecaf888");
-		File testFile = new File(fileName);
-		FileOutputStream cipherStream = new FileOutputStream(fileName+".enc");
+		File testFile = new File(testFileName);
+		FileOutputStream cipherStream = new FileOutputStream(testFileName+".enc");
 		
 		cu.encryptFileAuthenticatedSymmetric(testFile, (OutputStream) cipherStream, key, nonce);
 		
-		assertEquals(Hex.toHexString(Files.readAllBytes(Paths.get(fileName+".enc"))),
+		assertEquals(Hex.toHexString(Files.readAllBytes(Paths.get(testFileName+".enc"))),
 				Hex.toHexString(cu.encryptAuthenticatedSymmetric(
-						Files.readAllBytes(Paths.get(fileName)), key, nonce)));
-		
-		/*assertEquals(Files.readAllBytes(Paths.get("src/test/java/de/qabel/core/crypto/gcm-spec.pdf.enc")).length,
-				cu.encryptAuthenticatedSymmetric(
-						Files.readAllBytes(Paths.get("src/test/java/de/qabel/core/crypto/gcm-spec.pdf")), key, nonce).length);*/
+						Files.readAllBytes(Paths.get(testFileName)), key, nonce)));
 	}
 	
 	@Test
 	public void fileDecryptionTest() throws IOException {
-		String fileName = "src/test/java/de/qabel/core/crypto/gcm-spec.pdf";
 		byte[] key = Hex.decode("feffe9928665731c6d6a8f9467308308feffe9928665731c6d6a8f9467308308");
-		FileInputStream cipherStream = new FileInputStream(new File(fileName+".enc"));
+		FileInputStream cipherStream = new FileInputStream(new File(testFileName+".enc"));
 		
-		cu.decryptFileAuthenticatedSymmetricAndValidateTag(cipherStream, fileName+".dec", key);
+		cu.decryptFileAuthenticatedSymmetricAndValidateTag(cipherStream, testFileName+".dec", key);
 		
-		assertEquals(Hex.toHexString(Files.readAllBytes(Paths.get(fileName))),
-				Hex.toHexString(Files.readAllBytes(Paths.get(fileName+".dec"))));
+		assertEquals(Hex.toHexString(Files.readAllBytes(Paths.get(testFileName))),
+				Hex.toHexString(Files.readAllBytes(Paths.get(testFileName+".dec"))));
 	}
 }
