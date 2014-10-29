@@ -585,7 +585,7 @@ public class CryptoUtils {
 	 *            input text
 	 * @param key
 	 *            key for HMAC calculation
-	 * @return HMAC of text under key
+	 * @return HMAC of text under key or null if Key is invalid
 	 */
 	public byte[] calcHmac(byte[] text, SecretKey key) {
 		byte[] result = null;
@@ -628,7 +628,8 @@ public class CryptoUtils {
 	 * @param key
 	 *            Symmetric key which will be used for encryption and
 	 *            authentication
-	 * @return Ciphertext, in format: IV|enc(plaintext)|authentication tag
+	 * @return Ciphertext, in format: IV|enc(plaintext)|authentication tag or
+	 *         null if an error occurs
 	 */
 	public byte[] encryptAuthenticatedSymmetric(byte[] plainText,
 			SecretKey key) {
@@ -647,7 +648,8 @@ public class CryptoUtils {
 	 *            authentication
 	 * @param nonce
 	 *            random input that is concatenated to a counter
-	 * @return Ciphertext, in format: IV|enc(plaintext)|authentication tag
+	 * @return Ciphertext, in format: IV|enc(plaintext)|authentication tag or
+	 *         null if key is invalid
 	 */
 	public byte[] encryptAuthenticatedSymmetric(byte[] plainText,
 			SecretKey key, byte[] nonce) {
