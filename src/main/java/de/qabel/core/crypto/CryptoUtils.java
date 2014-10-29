@@ -48,7 +48,10 @@ public class CryptoUtils {
 	private final static String SYMM_KEY_ALGORITHM = "AES";
 	private final static String SYMM_TRANSFORMATION = "AES/CTR/NoPadding";
 	private final static String SYMM_ALT_TRANSFORMATION = "AES/GCM/NoPadding";
-	private final static int SYMM_ALT_READ_SIZE_BYTE = 1048;	// Must be >= 32 because GCM is a block cipher
+	private final static int SYMM_ALT_READ_SIZE_BYTE = 1048; // Must be >= 32
+																// because GCM
+																// is a block
+																// cipher
 	private final static int SYMM_IV_SIZE_BIT = 128;
 	private final static int SYMM_NONCE_SIZE_BIT = 96;
 	private final static int AES_KEY_SIZE_BYTE = 32;
@@ -710,15 +713,15 @@ public class CryptoUtils {
 				- SYMM_NONCE_SIZE_BIT / 8];
 		byte[] plainText = null;
 		IvParameterSpec iv;
-		
+
 		try {
-			bi.read(nonce);	
+			bi.read(nonce);
 			bi.read(encryptedPlainText);
 		} catch (IOException e1) {
 			// TODO Auto-generated catch block
 			e1.printStackTrace();
 		}
-		
+
 		iv = new IvParameterSpec(nonce);
 
 		try {
@@ -734,22 +737,58 @@ public class CryptoUtils {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		} catch (BadPaddingException e) {
-			// TODO this exception is thrown if ciphertext or authentication tag was modified
+			// TODO this exception is thrown if ciphertext or authentication tag
+			// was modified
 			logger.debug("Authentication tag is invalid!");
 			return null;
 		}
 		return plainText;
 	}
-	
-	
-	boolean encryptFileAuthenticatedSymmetric(File file, OutputStream outputStream, byte[] key, byte[] nonce) {
+
+	/**
+	 * Encrypts a File to an OutputStream. The OutputStream gets the result
+	 * immediately while encrypting. The step size of every seperate decryption
+	 * step is defined in SYMM_ALT_READ_SIZE_BYTE.
+	 * 
+	 * @param file
+	 *            Input file that will be encrypted
+	 * @param outputStream
+	 *            OutputStream where ciphertext is streamed to
+	 * @param key
+	 *            Key which is used to en-/decrypt
+	 * @return true if encryption worked as expected, else false
+	 */
+	boolean encryptFileAuthenticatedSymmetric(File file,
+			OutputStream outputStream, byte[] key) {
+		return encryptFileAuthenticatedSymmetric(file, outputStream, key, null);
+	}
+
+	/**
+	 * Encrypts a File to an OutputStream. The OutputStream gets the result
+	 * immediately while encrypting. The step size of every seperate decryption
+	 * step is defined in SYMM_ALT_READ_SIZE_BYTE. Nonce of size
+	 * SYMM_NONCE_SIZE_BIT is taken as nonce directly, else a random nonce is
+	 * generated.
+	 * 
+	 * @param file
+	 *            Input file that will be encrypted
+	 * @param outputStream
+	 *            OutputStream where ciphertext is streamed to
+	 * @param key
+	 *            Key which is used to en-/decrypt
+	 * @param nonce
+	 *            Random value which is concatenated to a counter
+	 * @return true if encryption worked as expected, else false
+	 */
+	boolean encryptFileAuthenticatedSymmetric(File file,
+			OutputStream outputStream, byte[] key, byte[] nonce) {
 		SecretKeySpec symmetricKey;
 		IvParameterSpec iv;
 		DataOutputStream cipherText = new DataOutputStream(outputStream);
 		FileInputStream fileInputStream;
 		byte[] temp = new byte[SYMM_ALT_READ_SIZE_BYTE];
 		int bytesRead = 0;
-		
+
 		try {
 			fileInputStream = new FileInputStream(file);
 		} catch (FileNotFoundException e2) {
@@ -758,13 +797,13 @@ public class CryptoUtils {
 			return false;
 		}
 
-		if(nonce.length != SYMM_NONCE_SIZE_BIT / 8) {
+		if (nonce == null || nonce.length != SYMM_NONCE_SIZE_BIT / 8) {
 			nonce = getRandomBytes(SYMM_NONCE_SIZE_BIT / 8);
 		}
 
 		iv = new IvParameterSpec(nonce);
 		symmetricKey = new SecretKeySpec(key, SYMM_KEY_ALGORITHM);
-		
+
 		try {
 			gcmCipher.init(Cipher.ENCRYPT_MODE, symmetricKey, iv);
 		} catch (InvalidKeyException e) {
@@ -774,10 +813,10 @@ public class CryptoUtils {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		
+
 		try {
 			cipherText.write(nonce);
-			while(fileInputStream.available() > SYMM_ALT_READ_SIZE_BYTE) {
+			while (fileInputStream.available() > SYMM_ALT_READ_SIZE_BYTE) {
 				fileInputStream.read(temp, 0, SYMM_ALT_READ_SIZE_BYTE);
 				cipherText.write(gcmCipher.update(temp));
 			}
@@ -796,15 +835,35 @@ public class CryptoUtils {
 		}
 		return true;
 	}
-	
-	File decryptFileAuthenticatedSymmetricAndValidateTag(InputStream inputStream, String pathName, byte[] key) {
+
+	/**
+	 * Decryptes ciphertext from an InputStream to a file. The decrypted content
+	 * is written to the file immediately. If decryption was successful a file
+	 * is returned, if authentication tag validation fails or another error
+	 * occurs null is returned.
+	 * 
+	 * @param inputStream
+	 *            InputStream from where the ciphertext is read
+	 * @param pathName
+	 *            Pathname where the decrypted file will be stored
+	 * @param key
+	 *            Key which is used to en-/decrypt the file
+	 * @return The decrypted file or null if authentication tag validation
+	 *         failed or another error occured
+	 */
+	File decryptFileAuthenticatedSymmetricAndValidateTag(
+			InputStream inputStream, String pathName, byte[] key) {
 		FileOutputStream fileOutput = null;
 		byte[] nonce = new byte[SYMM_NONCE_SIZE_BIT / 8];
 		IvParameterSpec iv;
 		SecretKeySpec symmetricKey;
 		byte[] temp = new byte[SYMM_ALT_READ_SIZE_BYTE];
 		int readBytes;
-		
+
+		if (pathName == null) {
+			// TODO generate a temp folder where files can be stored
+		}
+
 		try {
 			fileOutput = new FileOutputStream(pathName);
 		} catch (FileNotFoundException e2) {
@@ -818,7 +877,7 @@ public class CryptoUtils {
 			// TODO Auto-generated catch block
 			e1.printStackTrace();
 		}
-		
+
 		iv = new IvParameterSpec(nonce);
 		try {
 			gcmCipher.init(Cipher.DECRYPT_MODE, key, iv);
@@ -846,7 +905,7 @@ public class CryptoUtils {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		
+
 		return new File(pathName);
 	}
 }
