@@ -48,7 +48,7 @@ public class CryptoUtils {
 	private final static String SYMM_KEY_ALGORITHM = "AES";
 	private final static String SYMM_TRANSFORMATION = "AES/CTR/NoPadding";
 	private final static String SYMM_ALT_TRANSFORMATION = "AES/GCM/NoPadding";
-	private final static int SYMM_ALT_READ_SIZE_BYTE = 16;
+	private final static int SYMM_ALT_READ_SIZE_BYTE = 1048;	// Must be >= 32 because GCM is a block cipher
 	private final static int SYMM_IV_SIZE_BIT = 128;
 	private final static int SYMM_NONCE_SIZE_BIT = 96;
 	private final static int AES_KEY_SIZE_BYTE = 32;
@@ -748,6 +748,7 @@ public class CryptoUtils {
 		DataOutputStream cipherText = new DataOutputStream(outputStream);
 		FileInputStream fileInputStream;
 		byte[] temp = new byte[SYMM_ALT_READ_SIZE_BYTE];
+		int bytesRead = 0;
 		
 		try {
 			fileInputStream = new FileInputStream(file);
@@ -776,12 +777,13 @@ public class CryptoUtils {
 		
 		try {
 			cipherText.write(nonce);
-			while(fileInputStream.available() > 0) {
+			while(fileInputStream.available() > SYMM_ALT_READ_SIZE_BYTE) {
 				fileInputStream.read(temp, 0, SYMM_ALT_READ_SIZE_BYTE);
 				cipherText.write(gcmCipher.update(temp));
 			}
+			bytesRead = fileInputStream.read(temp);
+			cipherText.write(gcmCipher.doFinal(temp, 0, bytesRead));
 			fileInputStream.close();
-			cipherText.write(gcmCipher.doFinal());
 		} catch (IllegalBlockSizeException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -818,7 +820,6 @@ public class CryptoUtils {
 		}
 		
 		iv = new IvParameterSpec(nonce);
-
 		try {
 			gcmCipher.init(Cipher.DECRYPT_MODE, key, iv);
 			while(inputStream.available() > 0) {
