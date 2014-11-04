@@ -48,10 +48,13 @@ public class CryptoUtils {
 	private final static String SYMM_KEY_ALGORITHM = "AES";
 	private final static String SYMM_TRANSFORMATION = "AES/CTR/NoPadding";
 	private final static String SYMM_ALT_TRANSFORMATION = "AES/GCM/NoPadding";
-	private final static int SYMM_ALT_READ_SIZE_BYTE = 1024; // Must be >= 32
+	private final static int SYMM_ALT_READ_SIZE_BYTE = 4096; // Must be >= 32
 																// because GCM
 																// is a block
-																// cipher
+																// cipher;
+																// multiples of
+																// 4069 increase
+																// speed
 	private final static int SYMM_IV_SIZE_BIT = 128;
 	private final static int SYMM_NONCE_SIZE_BIT = 96;
 	private final static int AES_KEY_SIZE_BYTE = 32;
@@ -375,7 +378,7 @@ public class CryptoUtils {
 			counter[counter.length - 1] = 1;
 		}
 
-		if(nonce.length < SYMM_NONCE_SIZE_BIT / 8) {
+		if (nonce.length < SYMM_NONCE_SIZE_BIT / 8) {
 			nonce = getRandomBytes(SYMM_NONCE_SIZE_BIT / 8);
 		}
 		iv = new IvParameterSpec(nonce);
