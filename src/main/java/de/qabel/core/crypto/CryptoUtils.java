@@ -48,7 +48,7 @@ public class CryptoUtils {
 	private final static String SYMM_KEY_ALGORITHM = "AES";
 	private final static String SYMM_TRANSFORMATION = "AES/CTR/NoPadding";
 	private final static String SYMM_ALT_TRANSFORMATION = "AES/GCM/NoPadding";
-	private final static int SYMM_ALT_READ_SIZE_BYTE = 1048; // Must be >= 32
+	private final static int SYMM_ALT_READ_SIZE_BYTE = 1024; // Must be >= 32
 																// because GCM
 																// is a block
 																// cipher
@@ -789,7 +789,7 @@ public class CryptoUtils {
 		DataOutputStream cipherText = new DataOutputStream(outputStream);
 		FileInputStream fileInputStream;
 		byte[] temp = new byte[SYMM_ALT_READ_SIZE_BYTE];
-		int bytesRead = 0;
+		int readBytes;
 
 		try {
 			fileInputStream = new FileInputStream(file);
@@ -818,12 +818,11 @@ public class CryptoUtils {
 
 		try {
 			cipherText.write(nonce);
-			while (fileInputStream.available() > SYMM_ALT_READ_SIZE_BYTE) {
-				fileInputStream.read(temp, 0, SYMM_ALT_READ_SIZE_BYTE);
-				cipherText.write(gcmCipher.update(temp));
+			while ((readBytes = fileInputStream.read(temp, 0,
+					SYMM_ALT_READ_SIZE_BYTE)) > 0) {
+				cipherText.write(gcmCipher.update(temp, 0, readBytes));
 			}
-			bytesRead = fileInputStream.read(temp);
-			cipherText.write(gcmCipher.doFinal(temp, 0, bytesRead));
+			cipherText.write(gcmCipher.doFinal());
 			fileInputStream.close();
 		} catch (IllegalBlockSizeException e) {
 			// TODO Auto-generated catch block
@@ -882,10 +881,10 @@ public class CryptoUtils {
 
 		iv = new IvParameterSpec(nonce);
 		try {
-			gcmCipher.init(Cipher.DECRYPT_MODE, key, iv);
-			while(inputStream.available() > 0) {
-				inputStream.read(temp, 0, SYMM_ALT_READ_SIZE_BYTE);
-				fileOutput.write(gcmCipher.update(temp));
+			gcmCipher.init(Cipher.DECRYPT_MODE, symmetricKey, iv);
+			while ((readBytes = inputStream.read(temp, 0,
+					SYMM_ALT_READ_SIZE_BYTE)) > 0) {
+				fileOutput.write(gcmCipher.update(temp, 0, readBytes));
 			}
 			fileOutput.write(gcmCipher.doFinal());
 			fileOutput.close();
