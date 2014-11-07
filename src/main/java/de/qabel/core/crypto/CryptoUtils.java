@@ -47,8 +47,8 @@ public class CryptoUtils {
 	private final static int RSA_SIGNATURE_SIZE_BYTE = 256;
 	private final static String SYMM_KEY_ALGORITHM = "AES";
 	private final static String SYMM_TRANSFORMATION = "AES/CTR/NoPadding";
-	private final static String SYMM_ALT_TRANSFORMATION = "AES/GCM/NoPadding";
-	private final static int SYMM_ALT_READ_SIZE_BYTE = 4096; // Must be >= 32
+	private final static String SYMM_GCM_TRANSFORMATION = "AES/GCM/NoPadding";
+	private final static int SYMM_GCM_READ_SIZE_BYTE = 4096; // Must be >= 32
 																// because GCM
 																// is a block
 																// cipher;
@@ -85,7 +85,7 @@ public class CryptoUtils {
 					CRYPTOGRAPHIC_PROVIDER);
 			asymmetricCipher = Cipher.getInstance(RSA_CIPHER_ALGORITM,
 					CRYPTOGRAPHIC_PROVIDER);
-			gcmCipher = Cipher.getInstance(SYMM_ALT_TRANSFORMATION,
+			gcmCipher = Cipher.getInstance(SYMM_GCM_TRANSFORMATION,
 					CRYPTOGRAPHIC_PROVIDER);
 			signer = Signature.getInstance(SIGNATURE_ALGORITHM,
 					CRYPTOGRAPHIC_PROVIDER);
@@ -344,8 +344,10 @@ public class CryptoUtils {
 	 * @param key
 	 *            symmetric key which is used for en- and decryption
 	 * @return ciphertext which is the result of the encryption
+	 * @throws InvalidKeyException
+	 *             if key is invalid
 	 */
-	byte[] encryptSymmetric(byte[] plainText, SecretKey key) {
+	byte[] encryptSymmetric(byte[] plainText, SecretKey key) throws InvalidKeyException {
 		return encryptSymmetric(plainText, key, null);
 	}
 
@@ -361,9 +363,11 @@ public class CryptoUtils {
 	 * @param nonce
 	 *            random input that is concatenated to a counter
 	 * @return ciphertext which is the result of the encryption
+	 * @throws InvalidKeyException
+	 *             if key is invalid
 	 */
 	byte[] encryptSymmetric(byte[] plainText, SecretKey key,
-			byte[] nonce) {
+			byte[] nonce) throws InvalidKeyException {
 		ByteArrayOutputStream cipherText = new ByteArrayOutputStream();
 		ByteArrayOutputStream ivOS = new ByteArrayOutputStream();
 		IvParameterSpec iv;
@@ -388,8 +392,7 @@ public class CryptoUtils {
 			ivOS.write(counter);
 			cipherText.write(nonce);
 		} catch (IOException e1) {
-			// TODO Auto-generated catch block
-			e1.printStackTrace();
+			logger.error("Encryption: Nonce cannot be written to the ciphertext stream.");
 		}
 
 		iv = new IvParameterSpec(ivOS.toByteArray());
@@ -397,21 +400,14 @@ public class CryptoUtils {
 		try {
 			symmetricCipher.init(Cipher.ENCRYPT_MODE, key, iv);
 			cipherText.write(symmetricCipher.doFinal(plainText));
-		} catch (InvalidKeyException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (InvalidAlgorithmParameterException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
 		} catch (IllegalBlockSizeException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			// CTR means stream cipher, so this cannot be thrown
 		} catch (BadPaddingException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			// We do not use padding, so this cannot be thrown
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			logger.debug("Encryption: Output Stream cannot be written to.");
+		} catch (InvalidAlgorithmParameterException e) {
+			logger.debug("Encryption: Wrong parameters for file encryption.");
 		}
 
 		return cipherText.toByteArray();
@@ -427,8 +423,10 @@ public class CryptoUtils {
 	 * @param key
 	 *            symmetric key which is used for en- and decryption
 	 * @return plaintext which is the result of the decryption
+	 * @throws InvalidKeyException
+	 *             if key is invalid
 	 */
-	byte[] decryptSymmetric(byte[] cipherText, SecretKey key) {
+	byte[] decryptSymmetric(byte[] cipherText, SecretKey key) throws InvalidKeyException {
 		ByteArrayInputStream bi = new ByteArrayInputStream(cipherText);
 		byte[] nonce = new byte[SYMM_NONCE_SIZE_BYTE];
 		byte[] counter = new byte[(SYMM_IV_SIZE_BYTE - SYMM_NONCE_SIZE_BYTE)];
@@ -449,8 +447,7 @@ public class CryptoUtils {
 			ivOS.write(counter);
 			bi.read(encryptedPlainText);
 		} catch (IOException e1) {
-			// TODO Auto-generated catch block
-			e1.printStackTrace();
+			logger.debug("Decryption: Ciphertext could not be read.");
 		}
 
 		iv = new IvParameterSpec(ivOS.toByteArray());
@@ -458,18 +455,13 @@ public class CryptoUtils {
 		try {
 			symmetricCipher.init(Cipher.DECRYPT_MODE, key, iv);
 			plainText = symmetricCipher.doFinal(encryptedPlainText);
-		} catch (InvalidKeyException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
 		} catch (InvalidAlgorithmParameterException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			logger.debug("Decryption: Wrong parameters for decryption.");
 		} catch (IllegalBlockSizeException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			// CTR mode means stream cipher, so this cannot be thrown
 		} catch (BadPaddingException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			// We do not use padding, so this cannot be thrown
+			return null;
 		}
 		return plainText;
 	}
@@ -588,18 +580,15 @@ public class CryptoUtils {
 	 *            input text
 	 * @param key
 	 *            key for HMAC calculation
-	 * @return HMAC of text under key or null if Key is invalid
+	 * @return HMAC of text under key
+	 * @throws InvalidKeyException
+	 *             if key is invalid
 	 */
-	public byte[] calcHmac(byte[] text, SecretKey key) {
-		byte[] result = null;
-		try {
-			hmac.init(key);
-			result = hmac.doFinal(text);
-		} catch (InvalidKeyException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		return result;
+
+	public byte[] calcHmac(byte[] text, SecretKey key)
+			throws InvalidKeyException {
+		hmac.init(key);
+		return hmac.doFinal(text);
 	}
 
 	/**
@@ -612,8 +601,10 @@ public class CryptoUtils {
 	 * @param key
 	 *            key for HMAC calculation
 	 * @return result of verification i.e. true/false
+	 * @throws InvalidKeyException
+	 *             if key is invalid
 	 */
-	public boolean validateHmac(byte[] text, byte[] hmac, SecretKey key) {
+	public boolean validateHmac(byte[] text, byte[] hmac, SecretKey key) throws InvalidKeyException {
 		boolean validation = MessageDigest.isEqual(hmac, calcHmac(text, key));
 		if (!validation) {
 			logger.debug("HMAC is invalid!");
@@ -633,9 +624,11 @@ public class CryptoUtils {
 	 *            authentication
 	 * @return Ciphertext, in format: IV|enc(plaintext)|authentication tag or
 	 *         null if an error occurs
+	 * @throws InvalidKeyException
+	 *             if key is invaild
 	 */
 	public byte[] encryptAuthenticatedSymmetric(byte[] plainText,
-			SecretKey key) {
+			SecretKey key) throws InvalidKeyException {
 		return encryptAuthenticatedSymmetric(plainText, key, null);
 	}
 
@@ -653,9 +646,11 @@ public class CryptoUtils {
 	 *            random input that is concatenated to a counter
 	 * @return Ciphertext, in format: IV|enc(plaintext)|authentication tag or
 	 *         null if key is invalid
+	 * @throws InvalidKeyException
+	 *             if key is invalid
 	 */
 	public byte[] encryptAuthenticatedSymmetric(byte[] plainText,
-			SecretKey key, byte[] nonce) {
+			SecretKey key, byte[] nonce) throws InvalidKeyException {
 		IvParameterSpec iv;
 		ByteArrayOutputStream cipherText = new ByteArrayOutputStream();
 
@@ -666,33 +661,25 @@ public class CryptoUtils {
 		try {
 			cipherText.write(nonce);
 		} catch (IOException e1) {
-			// TODO Auto-generated catch block
-			e1.printStackTrace();
+			logger.debug("Encryption: Nonce cannot be written to the ciphertext.");
 		}
 
 		iv = new IvParameterSpec(nonce);
 
 		try {
 			gcmCipher.init(Cipher.ENCRYPT_MODE, key, iv);
-		} catch (InvalidKeyException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
 		} catch (InvalidAlgorithmParameterException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			logger.debug("Encryption: Wrong parameters for encryption cipher.");
 		}
 
 		try {
 			cipherText.write(gcmCipher.doFinal(plainText));
 		} catch (IllegalBlockSizeException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			logger.debug("Encryption: Block size of cipher was illegal => code mistake.");
 		} catch (BadPaddingException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			// We do not use padding , so this cannot be thrown
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			logger.debug("Encryption: Output Stream cannot be written to.");
 		}
 
 		return cipherText.toByteArray();
@@ -709,9 +696,11 @@ public class CryptoUtils {
 	 *            Symmetric key which will be used for decryption and
 	 *            verification
 	 * @return Plaintext or null if validation of authentication tag fails
+	 * @throws InvalidKeyException
+	 *             if key is invalid
 	 */
 	public byte[] decryptAuthenticatedSymmetricAndValidateTag(
-			byte[] cipherText, SecretKey key) {
+			byte[] cipherText, SecretKey key) throws InvalidKeyException {
 		ByteArrayInputStream bi = new ByteArrayInputStream(cipherText);
 		byte[] nonce = new byte[SYMM_NONCE_SIZE_BYTE];
 		byte[] encryptedPlainText = new byte[cipherText.length
@@ -723,8 +712,7 @@ public class CryptoUtils {
 			bi.read(nonce);
 			bi.read(encryptedPlainText);
 		} catch (IOException e1) {
-			// TODO Auto-generated catch block
-			e1.printStackTrace();
+			logger.debug("Decryption: Ciphertext can not be read.");
 		}
 
 		iv = new IvParameterSpec(nonce);
@@ -732,21 +720,15 @@ public class CryptoUtils {
 		try {
 			gcmCipher.init(Cipher.DECRYPT_MODE, key, iv);
 			plainText = gcmCipher.doFinal(encryptedPlainText);
-		} catch (InvalidKeyException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
 		} catch (InvalidAlgorithmParameterException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			logger.debug("Decryption: Wrong parameters for decryption.");
 		} catch (IllegalBlockSizeException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			logger.debug("Decryption: Ciphertext was encrypted with wrong block size.");
 		} catch (BadPaddingException e) {
-			// TODO this exception is thrown if ciphertext or authentication tag
-			// was modified
-			logger.debug("Authentication tag is invalid!");
+			logger.error("Decryption: Authentication tag is invalid!");
 			return null;
 		}
+
 		return plainText;
 	}
 
@@ -762,9 +744,11 @@ public class CryptoUtils {
 	 * @param key
 	 *            Key which is used to en-/decrypt
 	 * @return true if encryption worked as expected, else false
+	 * @throws InvalidKeyException
+	 *             if key is invalid
 	 */
 	boolean encryptFileAuthenticatedSymmetric(File file,
-			OutputStream outputStream, byte[] key) {
+			OutputStream outputStream, SecretKey key) throws InvalidKeyException {
 		return encryptFileAuthenticatedSymmetric(file, outputStream, key, null);
 	}
 
@@ -784,21 +768,22 @@ public class CryptoUtils {
 	 * @param nonce
 	 *            Random value which is concatenated to a counter
 	 * @return true if encryption worked as expected, else false
+	 * @throws InvalidKeyException
+	 *             if key is invalid
 	 */
 	boolean encryptFileAuthenticatedSymmetric(File file,
-			OutputStream outputStream, byte[] key, byte[] nonce) {
-		SecretKeySpec symmetricKey;
+			OutputStream outputStream, SecretKey key, byte[] nonce)
+			throws InvalidKeyException {
 		IvParameterSpec iv;
 		DataOutputStream cipherText = new DataOutputStream(outputStream);
 		FileInputStream fileInputStream;
-		byte[] temp = new byte[SYMM_ALT_READ_SIZE_BYTE];
+		byte[] temp = new byte[SYMM_GCM_READ_SIZE_BYTE];
 		int readBytes;
 
 		try {
 			fileInputStream = new FileInputStream(file);
 		} catch (FileNotFoundException e2) {
-			// TODO Auto-generated catch block
-			e2.printStackTrace();
+			logger.debug("Encryption: File for encryption was not found.");
 			return false;
 		}
 
@@ -807,35 +792,27 @@ public class CryptoUtils {
 		}
 
 		iv = new IvParameterSpec(nonce);
-		symmetricKey = new SecretKeySpec(key, SYMM_KEY_ALGORITHM);
 
 		try {
-			gcmCipher.init(Cipher.ENCRYPT_MODE, symmetricKey, iv);
-		} catch (InvalidKeyException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			gcmCipher.init(Cipher.ENCRYPT_MODE, key, iv);
 		} catch (InvalidAlgorithmParameterException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			logger.debug("Encryption: Wrong parameters for file encryption cipher.");
 		}
 
 		try {
 			cipherText.write(nonce);
 			while ((readBytes = fileInputStream.read(temp, 0,
-					SYMM_ALT_READ_SIZE_BYTE)) > 0) {
+					SYMM_GCM_READ_SIZE_BYTE)) > 0) {
 				cipherText.write(gcmCipher.update(temp, 0, readBytes));
 			}
 			cipherText.write(gcmCipher.doFinal());
 			fileInputStream.close();
 		} catch (IllegalBlockSizeException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			logger.debug("Encryption: Block size of cipher was illegal => code mistake.");
 		} catch (BadPaddingException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			// We use no padding, so this cannot be thrown
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			logger.debug("Encryption: Input/output Stream cannot be written/read to/from.");
 		}
 		return true;
 	}
@@ -854,14 +831,16 @@ public class CryptoUtils {
 	 *            Key which is used to en-/decrypt the file
 	 * @return The decrypted file or null if authentication tag validation
 	 *         failed or another error occured
+	 * @throws InvalidKeyException
+	 *             if key is invalid
 	 */
 	File decryptFileAuthenticatedSymmetricAndValidateTag(
-			InputStream inputStream, String pathName, byte[] key) {
+			InputStream inputStream, String pathName, SecretKey key)
+			throws InvalidKeyException {
 		FileOutputStream fileOutput = null;
 		byte[] nonce = new byte[SYMM_NONCE_SIZE_BYTE];
 		IvParameterSpec iv;
-		SecretKeySpec symmetricKey;
-		byte[] temp = new byte[SYMM_ALT_READ_SIZE_BYTE];
+		byte[] temp = new byte[SYMM_GCM_READ_SIZE_BYTE];
 		int readBytes;
 
 		if (pathName == null) {
@@ -871,43 +850,34 @@ public class CryptoUtils {
 		try {
 			fileOutput = new FileOutputStream(pathName);
 		} catch (FileNotFoundException e2) {
-			// TODO Auto-generated catch block
-			e2.printStackTrace();
+			logger.debug("Decryption: File " + pathName
+					+ " was not found/can not be written to.");
 		}
 
 		try {
 			inputStream.read(nonce);
 		} catch (IOException e1) {
-			// TODO Auto-generated catch block
-			e1.printStackTrace();
+			logger.debug("Decryption: Ciphertext (in this case the nonce) can not be read.");
 		}
 
 		iv = new IvParameterSpec(nonce);
 		try {
-			gcmCipher.init(Cipher.DECRYPT_MODE, symmetricKey, iv);
+			gcmCipher.init(Cipher.DECRYPT_MODE, key, iv);
 			while ((readBytes = inputStream.read(temp, 0,
-					SYMM_ALT_READ_SIZE_BYTE)) > 0) {
+					SYMM_GCM_READ_SIZE_BYTE)) > 0) {
 				fileOutput.write(gcmCipher.update(temp, 0, readBytes));
 			}
 			fileOutput.write(gcmCipher.doFinal());
 			fileOutput.close();
-		} catch (InvalidKeyException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
 		} catch (InvalidAlgorithmParameterException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			logger.debug("Decryption: Wrong parameters for file decryption.");
 		} catch (IllegalBlockSizeException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			logger.debug("Decryption: File was encrypted with wrong block size.");
 		} catch (BadPaddingException e) {
-			// TODO this exception is thrown if ciphertext or authentication tag
-			// was modified
-			logger.debug("Authentication tag is invalid!");
+			logger.error("Decryption: Authentication tag is invalid!");
 			return null;
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			logger.debug("Decryption: Input/output Stream cannot be written/read to/from.");
 		}
 
 		return new File(pathName);
