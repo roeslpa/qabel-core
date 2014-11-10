@@ -645,8 +645,7 @@ public class CryptoUtils {
 	 *            authentication
 	 * @param nonce
 	 *            random input that is concatenated to a counter
-	 * @return Ciphertext, in format: IV|enc(plaintext)|authentication tag or
-	 *         null if key is invalid
+	 * @return Ciphertext, in format: IV|enc(plaintext)|authentication tag
 	 * @throws InvalidKeyException
 	 *             if key is invalid
 	 */
@@ -662,9 +661,7 @@ public class CryptoUtils {
 		try {
 			cipherText.write(nonce);
 		} catch (IOException e1) {
-			logger.error(
-					"Encryption: Nonce cannot be written to the ciphertext.",
-					e1);
+			// Will not happen since it is generated just before
 		}
 
 		iv = new IvParameterSpec(nonce);
@@ -685,7 +682,8 @@ public class CryptoUtils {
 		} catch (BadPaddingException e) {
 			// We do not use padding , so this cannot be thrown
 		} catch (IOException e) {
-			logger.debug("Encryption: Output Stream cannot be written to.", e);
+			// Will not happen since cipherText is not modified outside of this
+			// function
 		}
 
 		return cipherText.toByteArray();
@@ -701,7 +699,8 @@ public class CryptoUtils {
 	 * @param key
 	 *            Symmetric key which will be used for decryption and
 	 *            verification
-	 * @return Plaintext or null if validation of authentication tag fails
+	 * @return Plaintext or null if validation of authentication tag fails or
+	 *         another error occurs
 	 * @throws InvalidKeyException
 	 *             if key is invalid
 	 */
@@ -728,10 +727,12 @@ public class CryptoUtils {
 			plainText = gcmCipher.doFinal(encryptedPlainText);
 		} catch (InvalidAlgorithmParameterException e) {
 			logger.debug("Decryption: Wrong parameters for decryption.", e);
+			return null;
 		} catch (IllegalBlockSizeException e) {
 			logger.debug(
 					"Decryption: Ciphertext was encrypted with wrong block size.",
 					e);
+			return null;
 		} catch (BadPaddingException e) {
 			logger.error("Decryption: Authentication tag is invalid!", e);
 			return null;
@@ -807,6 +808,7 @@ public class CryptoUtils {
 			logger.debug(
 					"Encryption: Wrong parameters for file encryption cipher.",
 					e);
+			return false;
 		}
 
 		try {
@@ -821,12 +823,14 @@ public class CryptoUtils {
 			logger.debug(
 					"Encryption: Block size of cipher was illegal => code mistake.",
 					e);
+			// Will not happen
 		} catch (BadPaddingException e) {
-			// We use no padding, so this cannot be thrown
+			// We do not use padding, so this cannot be thrown
 		} catch (IOException e) {
 			logger.debug(
 					"Encryption: Input/output Stream cannot be written/read to/from.",
 					e);
+			return false;
 		}
 		return true;
 	}
@@ -866,6 +870,7 @@ public class CryptoUtils {
 		} catch (FileNotFoundException e2) {
 			logger.debug("Decryption: File " + pathName
 					+ " was not found/can not be written to.", e2);
+			// TODO like above: create temp file
 		}
 
 		try {
@@ -874,6 +879,7 @@ public class CryptoUtils {
 			logger.debug(
 					"Decryption: Ciphertext (in this case the nonce) can not be read.",
 					e1);
+			return null;
 		}
 
 		iv = new IvParameterSpec(nonce);
@@ -887,9 +893,11 @@ public class CryptoUtils {
 			fileOutput.close();
 		} catch (InvalidAlgorithmParameterException e) {
 			logger.debug("Decryption: Wrong parameters for file decryption.", e);
+			return null;
 		} catch (IllegalBlockSizeException e) {
 			logger.debug(
 					"Decryption: File was encrypted with wrong block size.", e);
+			return null;
 		} catch (BadPaddingException e) {
 			logger.error("Decryption: Authentication tag is invalid!", e);
 			return null;
@@ -897,6 +905,7 @@ public class CryptoUtils {
 			logger.debug(
 					"Decryption: Input/output Stream cannot be written/read to/from.",
 					e);
+			return null;
 		}
 
 		return new File(pathName);
