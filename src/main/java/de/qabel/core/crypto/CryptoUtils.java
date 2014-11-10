@@ -392,7 +392,9 @@ public class CryptoUtils {
 			ivOS.write(counter);
 			cipherText.write(nonce);
 		} catch (IOException e1) {
-			logger.error("Encryption: Nonce cannot be written to the ciphertext stream: ", e1);
+			logger.error(
+					"Encryption: Nonce cannot be written to the ciphertext stream: ",
+					e1);
 		}
 
 		iv = new IvParameterSpec(ivOS.toByteArray());
@@ -461,7 +463,6 @@ public class CryptoUtils {
 			// CTR mode means stream cipher, so this cannot be thrown
 		} catch (BadPaddingException e) {
 			// We do not use padding, so this cannot be thrown
-			return null;
 		}
 		return plainText;
 	}
@@ -661,7 +662,9 @@ public class CryptoUtils {
 		try {
 			cipherText.write(nonce);
 		} catch (IOException e1) {
-			logger.error("Encryption: Nonce cannot be written to the ciphertext.", e1);
+			logger.error(
+					"Encryption: Nonce cannot be written to the ciphertext.",
+					e1);
 		}
 
 		iv = new IvParameterSpec(nonce);
@@ -669,13 +672,16 @@ public class CryptoUtils {
 		try {
 			gcmCipher.init(Cipher.ENCRYPT_MODE, key, iv);
 		} catch (InvalidAlgorithmParameterException e) {
-			logger.debug("Encryption: Wrong parameters for encryption cipher.", e);
+			logger.debug("Encryption: Wrong parameters for encryption cipher.",
+					e);
 		}
 
 		try {
 			cipherText.write(gcmCipher.doFinal(plainText));
 		} catch (IllegalBlockSizeException e) {
-			logger.debug("Encryption: Block size of cipher was illegal => code mistake.", e);
+			logger.debug(
+					"Encryption: Block size of cipher was illegal => code mistake.",
+					e);
 		} catch (BadPaddingException e) {
 			// We do not use padding , so this cannot be thrown
 		} catch (IOException e) {
@@ -723,7 +729,9 @@ public class CryptoUtils {
 		} catch (InvalidAlgorithmParameterException e) {
 			logger.debug("Decryption: Wrong parameters for decryption.", e);
 		} catch (IllegalBlockSizeException e) {
-			logger.debug("Decryption: Ciphertext was encrypted with wrong block size.", e);
+			logger.debug(
+					"Decryption: Ciphertext was encrypted with wrong block size.",
+					e);
 		} catch (BadPaddingException e) {
 			logger.error("Decryption: Authentication tag is invalid!", e);
 			return null;
@@ -796,7 +804,9 @@ public class CryptoUtils {
 		try {
 			gcmCipher.init(Cipher.ENCRYPT_MODE, key, iv);
 		} catch (InvalidAlgorithmParameterException e) {
-			logger.debug("Encryption: Wrong parameters for file encryption cipher.", e);
+			logger.debug(
+					"Encryption: Wrong parameters for file encryption cipher.",
+					e);
 		}
 
 		try {
@@ -808,11 +818,15 @@ public class CryptoUtils {
 			cipherText.write(gcmCipher.doFinal());
 			fileInputStream.close();
 		} catch (IllegalBlockSizeException e) {
-			logger.debug("Encryption: Block size of cipher was illegal => code mistake.", e);
+			logger.debug(
+					"Encryption: Block size of cipher was illegal => code mistake.",
+					e);
 		} catch (BadPaddingException e) {
 			// We use no padding, so this cannot be thrown
 		} catch (IOException e) {
-			logger.debug("Encryption: Input/output Stream cannot be written/read to/from.", e);
+			logger.debug(
+					"Encryption: Input/output Stream cannot be written/read to/from.",
+					e);
 		}
 		return true;
 	}
@@ -857,7 +871,9 @@ public class CryptoUtils {
 		try {
 			inputStream.read(nonce);
 		} catch (IOException e1) {
-			logger.debug("Decryption: Ciphertext (in this case the nonce) can not be read.", e1);
+			logger.debug(
+					"Decryption: Ciphertext (in this case the nonce) can not be read.",
+					e1);
 		}
 
 		iv = new IvParameterSpec(nonce);
@@ -872,12 +888,15 @@ public class CryptoUtils {
 		} catch (InvalidAlgorithmParameterException e) {
 			logger.debug("Decryption: Wrong parameters for file decryption.", e);
 		} catch (IllegalBlockSizeException e) {
-			logger.debug("Decryption: File was encrypted with wrong block size.", e);
+			logger.debug(
+					"Decryption: File was encrypted with wrong block size.", e);
 		} catch (BadPaddingException e) {
 			logger.error("Decryption: Authentication tag is invalid!", e);
 			return null;
 		} catch (IOException e) {
-			logger.debug("Decryption: Input/output Stream cannot be written/read to/from.", e);
+			logger.debug(
+					"Decryption: Input/output Stream cannot be written/read to/from.",
+					e);
 		}
 
 		return new File(pathName);
