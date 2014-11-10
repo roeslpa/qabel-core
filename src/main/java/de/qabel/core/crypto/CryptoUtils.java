@@ -392,7 +392,7 @@ public class CryptoUtils {
 			ivOS.write(counter);
 			cipherText.write(nonce);
 		} catch (IOException e1) {
-			logger.error("Encryption: Nonce cannot be written to the ciphertext stream.");
+			logger.error("Encryption: Nonce cannot be written to the ciphertext stream: "+e1.getLocalizedMessage());
 		}
 
 		iv = new IvParameterSpec(ivOS.toByteArray());
@@ -447,7 +447,7 @@ public class CryptoUtils {
 			ivOS.write(counter);
 			bi.read(encryptedPlainText);
 		} catch (IOException e1) {
-			logger.debug("Decryption: Ciphertext could not be read.");
+			logger.error("Decryption: Ciphertext could not be read: "+e1.getLocalizedMessage());
 		}
 
 		iv = new IvParameterSpec(ivOS.toByteArray());
@@ -661,7 +661,7 @@ public class CryptoUtils {
 		try {
 			cipherText.write(nonce);
 		} catch (IOException e1) {
-			logger.debug("Encryption: Nonce cannot be written to the ciphertext.");
+			logger.error("Encryption: Nonce cannot be written to the ciphertext."+e1.getLocalizedMessage());
 		}
 
 		iv = new IvParameterSpec(nonce);
