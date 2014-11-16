@@ -90,7 +90,7 @@ public class CryptoUtils {
 			signer = Signature.getInstance(SIGNATURE_ALGORITHM,
 					CRYPTOGRAPHIC_PROVIDER);
 			hmac = Mac.getInstance(HMAC_ALGORITHM, CRYPTOGRAPHIC_PROVIDER);
-			keyGenerator = KeyGenerator.getInstance(SYMM_KEY_ALGORITHM, 
+			keyGenerator = KeyGenerator.getInstance(SYMM_KEY_ALGORITHM,
 					CRYPTOGRAPHIC_PROVIDER);
 			keyGenerator.init(AES_KEY_SIZE_BIT);
 		} catch (NoSuchAlgorithmException e) {
@@ -347,7 +347,8 @@ public class CryptoUtils {
 	 * @throws InvalidKeyException
 	 *             if key is invalid
 	 */
-	byte[] encryptSymmetric(byte[] plainText, SecretKey key) throws InvalidKeyException {
+	byte[] encryptSymmetric(byte[] plainText, SecretKey key)
+			throws InvalidKeyException {
 		return encryptSymmetric(plainText, key, null);
 	}
 
@@ -366,8 +367,8 @@ public class CryptoUtils {
 	 * @throws InvalidKeyException
 	 *             if key is invalid
 	 */
-	byte[] encryptSymmetric(byte[] plainText, SecretKey key,
-			byte[] nonce) throws InvalidKeyException {
+	byte[] encryptSymmetric(byte[] plainText, SecretKey key, byte[] nonce)
+			throws InvalidKeyException {
 		ByteArrayOutputStream cipherText = new ByteArrayOutputStream();
 		ByteArrayOutputStream ivOS = new ByteArrayOutputStream();
 		IvParameterSpec iv;
@@ -428,7 +429,8 @@ public class CryptoUtils {
 	 * @throws InvalidKeyException
 	 *             if key is invalid
 	 */
-	byte[] decryptSymmetric(byte[] cipherText, SecretKey key) throws InvalidKeyException {
+	byte[] decryptSymmetric(byte[] cipherText, SecretKey key)
+			throws InvalidKeyException {
 		ByteArrayInputStream bi = new ByteArrayInputStream(cipherText);
 		byte[] nonce = new byte[SYMM_NONCE_SIZE_BYTE];
 		byte[] counter = new byte[(SYMM_IV_SIZE_BYTE - SYMM_NONCE_SIZE_BYTE)];
@@ -514,9 +516,9 @@ public class CryptoUtils {
 	 *         signature is invalid
 	 * @throws InvalidKeyException
 	 */
-	public String decryptHybridAndValidateSignature(
-			byte[] cipherText, QblPrimaryKeyPair privKey,
-			QblSignPublicKey signatureKey) throws InvalidKeyException {
+	public String decryptHybridAndValidateSignature(byte[] cipherText,
+			QblPrimaryKeyPair privKey, QblSignPublicKey signatureKey)
+			throws InvalidKeyException {
 		ByteArrayInputStream bs = new ByteArrayInputStream(cipherText);
 		// TODO: Include header byte
 
@@ -568,7 +570,7 @@ public class CryptoUtils {
 				privKey.getQblEncPrivateKey());
 		if (rawAesKey != null) {
 			logger.debug("Message is OK!");
-			return new String(decryptSymmetric(aesCipherText, 
+			return new String(decryptSymmetric(aesCipherText,
 					new SecretKeySpec(rawAesKey, SYMM_KEY_ALGORITHM)));
 		}
 		return null;
@@ -605,7 +607,8 @@ public class CryptoUtils {
 	 * @throws InvalidKeyException
 	 *             if key is invalid
 	 */
-	public boolean validateHmac(byte[] text, byte[] hmac, SecretKey key) throws InvalidKeyException {
+	public boolean validateHmac(byte[] text, byte[] hmac, SecretKey key)
+			throws InvalidKeyException {
 		boolean validation = MessageDigest.isEqual(hmac, calcHmac(text, key));
 		if (!validation) {
 			logger.debug("HMAC is invalid!");
@@ -628,8 +631,8 @@ public class CryptoUtils {
 	 * @throws InvalidKeyException
 	 *             if key is invaild
 	 */
-	public byte[] encryptAuthenticatedSymmetric(byte[] plainText,
-			SecretKey key) throws InvalidKeyException {
+	public byte[] encryptAuthenticatedSymmetric(byte[] plainText, SecretKey key)
+			throws InvalidKeyException {
 		return encryptAuthenticatedSymmetric(plainText, key, null);
 	}
 
@@ -757,7 +760,8 @@ public class CryptoUtils {
 	 *             if key is invalid
 	 */
 	boolean encryptFileAuthenticatedSymmetric(File file,
-			OutputStream outputStream, SecretKey key) throws InvalidKeyException {
+			OutputStream outputStream, SecretKey key)
+			throws InvalidKeyException {
 		return encryptFileAuthenticatedSymmetric(file, outputStream, key, null);
 	}
 
