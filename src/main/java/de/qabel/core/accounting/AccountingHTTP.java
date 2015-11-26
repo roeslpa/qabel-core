@@ -21,10 +21,7 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class AccountingHTTP {
 
@@ -111,12 +108,36 @@ public class AccountingHTTP {
 			try {
 				Map<String, Object> answer = gson.fromJson(responseString, HashMap.class);
 				profile.setQuota(((Double) answer.get("quota")).intValue());
-				profile.setPrefix((String) answer.get("prefix"));
-			} catch (JsonSyntaxException |NumberFormatException|NullPointerException e) {
+				updatePrefixes();
+			} catch (JsonSyntaxException | NumberFormatException | NullPointerException e) {
 				logger.error("Illegal response: {}", responseString);
 				throw new IOException("Illegal response from accounting server", e);
 			}
 
+		}
+	}
+
+	public void updatePrefixes() throws IOException, QblInvalidCredentials {
+		if (server.getAuthToken() == null) {
+			login();
+		}
+		URI uri;
+		try {
+			uri = this.buildUri("api/v0/prefix").build();
+		} catch (URISyntaxException e) {
+			throw new RuntimeException("Url building failed", e);
+		}
+		HttpGet httpGet = new HttpGet(uri);
+		httpGet.addHeader("Authorization", "Token " + server.getAuthToken());
+		try (CloseableHttpResponse response = httpclient.execute(httpGet)) {
+			HttpEntity entity = response.getEntity();
+			if (entity == null) {
+				throw new IOException("No answer from login");
+			}
+			String responseString = EntityUtils.toString(entity);
+			ArrayList<String> prefixes = new ArrayList(Arrays.asList(
+					responseString.subSequence(2, responseString.length() - 2).toString().split("\", \"")));
+			profile.setPrefixes(prefixes);
 		}
 	}
 
@@ -140,13 +161,10 @@ public class AccountingHTTP {
 			String responseString = EntityUtils.toString(entity);
 			try {
 				LinkedTreeMap<String, Object> answer = gson.fromJson(responseString, LinkedTreeMap.class);
-				LinkedTreeMap<String, String> credentials =
-						(LinkedTreeMap<String, String>) answer.get("Credentials");
-				return new BasicSessionCredentials(
-						credentials.get("AccessKeyId"),
-						credentials.get("SecretAccessKey"),
+				LinkedTreeMap<String, String> credentials = (LinkedTreeMap<String, String>) answer.get("Credentials");
+				return new BasicSessionCredentials(credentials.get("AccessKeyId"), credentials.get("SecretAccessKey"),
 						credentials.get("SessionToken"));
-			} catch (JsonSyntaxException|NullPointerException e) {
+			} catch (JsonSyntaxException | NullPointerException e) {
 				// NullPointerException also means that our response was not ok because on of the
 				// .get() failed
 				logger.error("Illegal response: {}", responseString);
@@ -161,17 +179,16 @@ public class AccountingHTTP {
 			logger.error("Resource {} starts or ends with /", resource);
 			throw new RuntimeException("Illegal resource");
 		}
-		return new URIBuilder(this.server.getUri())
-					.setPath('/' + resource + '/');
+		return new URIBuilder(this.server.getUri()).setPath('/' + resource + '/');
 	}
 
-	public String getPrefix() throws IOException, QblInvalidCredentials {
-		String prefix = profile.getPrefix();
-		if (prefix == null) {
-			updateProfile();
-			prefix = profile.getPrefix();
+	public ArrayList<String> getPrefixes() throws IOException, QblInvalidCredentials {
+		ArrayList<String> prefixes = profile.getPrefixes();
+		if (prefixes.isEmpty()) {
+			updatePrefixes();
+			prefixes = profile.getPrefixes();
 		}
-		return prefix;
+		return prefixes;
 
 	}
 
