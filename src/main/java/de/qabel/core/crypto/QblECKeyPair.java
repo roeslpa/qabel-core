@@ -1,8 +1,12 @@
 package de.qabel.core.crypto;
 
+import org.spongycastle.crypto.digests.SHA256Digest;
+
 import java.io.Serializable;
+import java.nio.ByteBuffer;
 import java.security.SecureRandom;
 import java.util.Arrays;
+import java.util.UUID;
 
 /**
  * Elliptic curve key pair
@@ -49,7 +53,7 @@ public class QblECKeyPair implements Serializable {
 
 	/**
 	 * Elliptic curve diffie hellman which generates a shared secret.
-	 * 
+	 *
 	 * @param contactsPubKey
 	 *            Public key of contact
 	 * @return shared secret between A and B
@@ -60,7 +64,7 @@ public class QblECKeyPair implements Serializable {
 
 	/**
 	 * Get public part of key pair
-	 * 
+	 *
 	 * @return public part of key pair
 	 */
 	public QblECPublicKey getPub() {
@@ -69,6 +73,24 @@ public class QblECKeyPair implements Serializable {
 
 	public byte[] getPrivateKey() {
 		return privateKey;
+	}
+
+	/**
+	 * Calculates the name of the index DM for a given prefix
+	 * @param prefix Name of the prefix
+	 * @return Name of the index DM
+	 */
+	public String getRootRef(String prefix) {
+		SHA256Digest md = new SHA256Digest();
+		// Byte array for result of hash of 256 Bit = 256/8 Byte
+		byte[] digest = new byte[256/8];
+		md.update(prefix.getBytes(), 0, prefix.getBytes().length);
+		md.update(this.privateKey, 0, KEY_SIZE_BYTE);
+		md.doFinal(digest, 0);
+		byte[] firstBytes = Arrays.copyOfRange(digest, 0, 16);
+		ByteBuffer bb = ByteBuffer.wrap(firstBytes);
+		UUID uuid = new UUID(bb.getLong(), bb.getLong());
+		return uuid.toString();
 	}
 
 	@Override
