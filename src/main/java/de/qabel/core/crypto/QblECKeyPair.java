@@ -83,7 +83,7 @@ public class QblECKeyPair implements Serializable {
 	public String getRootRef(String prefix) {
 		SHA256Digest md = new SHA256Digest();
 		// Byte array for result of hash of 256 Bit = 256/8 Byte
-		byte[] digest = new byte[256/8];
+		byte[] digest = new byte[md.getDigestSize()];
 		md.update(prefix.getBytes(), 0, prefix.getBytes().length);
 		md.update(this.privateKey, 0, KEY_SIZE_BYTE);
 		md.doFinal(digest, 0);
