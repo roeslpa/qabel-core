@@ -1,12 +1,8 @@
 package de.qabel.core.crypto;
 
-import org.spongycastle.crypto.digests.SHA256Digest;
-
 import java.io.Serializable;
-import java.nio.ByteBuffer;
 import java.security.SecureRandom;
 import java.util.Arrays;
-import java.util.UUID;
 
 /**
  * Elliptic curve key pair
