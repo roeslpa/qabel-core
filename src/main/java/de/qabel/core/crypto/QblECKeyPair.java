@@ -71,26 +71,9 @@ public class QblECKeyPair implements Serializable {
 		return pubKey;
 	}
 
+	// TODO: Shift all usages of the private key to this class and export the key only password protected
 	public byte[] getPrivateKey() {
 		return privateKey;
-	}
-
-	/**
-	 * Calculates the name of the index DM for a given prefix
-	 * @param prefix Name of the prefix
-	 * @return Name of the index DM
-	 */
-	public String getRootRef(String prefix) {
-		SHA256Digest md = new SHA256Digest();
-		// Byte array for result of hash of 256 Bit = 256/8 Byte
-		byte[] digest = new byte[md.getDigestSize()];
-		md.update(prefix.getBytes(), 0, prefix.getBytes().length);
-		md.update(this.privateKey, 0, KEY_SIZE_BYTE);
-		md.doFinal(digest, 0);
-		byte[] firstBytes = Arrays.copyOfRange(digest, 0, 16);
-		ByteBuffer bb = ByteBuffer.wrap(firstBytes);
-		UUID uuid = new UUID(bb.getLong(), bb.getLong());
-		return uuid.toString();
 	}
 
 	@Override
